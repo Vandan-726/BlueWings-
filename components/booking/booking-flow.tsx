@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { SeatMap } from "@/components/booking/seat-map"
 import { formatINR, formatTime, formatShortDate } from "@/lib/format"
@@ -40,6 +40,7 @@ export function BookingFlow({
   const router = useRouter()
   const [step, setStep] = useState(0)
   const [seats, setSeats] = useState<string[]>([])
+  const [currentPaxCount, setCurrentPaxCount] = useState(paxCount)
   const [pax, setPax] = useState<Pax[]>(
     Array.from({ length: paxCount }, () => ({ firstName: "", lastName: "", gender: "", age: "" })),
   )
@@ -51,13 +52,57 @@ export function BookingFlow({
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    setCurrentPaxCount(paxCount)
+    setPax((prev) => {
+      if (prev.length === paxCount) return prev
+      if (prev.length < paxCount) {
+        return [
+          ...prev,
+          ...Array.from({ length: paxCount - prev.length }, () => ({
+            firstName: "",
+            lastName: "",
+            gender: "",
+            age: "",
+          })),
+        ]
+      }
+      return prev.slice(0, paxCount)
+    })
+  }, [paxCount])
+
   const perSeat =
     cabin === "business"
       ? Number(flight.businessPrice)
       : cabin === "premium"
         ? Number(flight.premiumPrice)
         : Number(flight.economyPrice)
-  const total = perSeat * paxCount
+  const total = perSeat * currentPaxCount
+
+  function handleIncrement() {
+    if (currentPaxCount >= 9) return
+    const nextCount = currentPaxCount + 1
+    setCurrentPaxCount(nextCount)
+    setPax((prev) => [...prev, { firstName: "", lastName: "", gender: "", age: "" }])
+    
+    const searchParams = new URLSearchParams(window.location.search)
+    searchParams.set("pax", nextCount.toString())
+    router.replace(`${window.location.pathname}?${searchParams.toString()}`)
+  }
+
+  function handleDecrement() {
+    if (currentPaxCount <= 1) return
+    const nextCount = currentPaxCount - 1
+    setCurrentPaxCount(nextCount)
+    setPax((prev) => prev.slice(0, -1))
+    if (seats.length > nextCount) {
+      setSeats((prev) => prev.slice(0, nextCount))
+    }
+    
+    const searchParams = new URLSearchParams(window.location.search)
+    searchParams.set("pax", nextCount.toString())
+    router.replace(`${window.location.pathname}?${searchParams.toString()}`)
+  }
 
   function toggleSeat(seat: string) {
     setSeats((prev) => (prev.includes(seat) ? prev.filter((s) => s !== seat) : [...prev, seat]))
@@ -145,10 +190,10 @@ export function BookingFlow({
           <section aria-label="Choose seats">
             <h1 className="mb-1 text-2xl font-semibold text-foreground">Choose your seats</h1>
             <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
-              Select up to {paxCount} seat{paxCount > 1 ? "s" : ""} in the {cabin} cabin, or skip to get seats assigned
+              Select up to {currentPaxCount} seat{currentPaxCount > 1 ? "s" : ""} in the {cabin} cabin, or skip to get seats assigned
               at check-in.
             </p>
-            <SeatMap occupied={occupied} selected={seats} cabin={cabin} maxSelectable={paxCount} onToggle={toggleSeat} />
+            <SeatMap occupied={occupied} selected={seats} cabin={cabin} maxSelectable={currentPaxCount} onToggle={toggleSeat} />
             <div className="mt-6 flex items-center justify-between">
               <button
                 type="button"
@@ -402,16 +447,36 @@ export function BookingFlow({
             <dt className="text-muted-foreground">Cabin</dt>
             <dd className="font-medium capitalize text-foreground">{cabin}</dd>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between items-center">
             <dt className="text-muted-foreground">Travellers</dt>
-            <dd className="font-medium text-foreground">{paxCount}</dd>
+            <dd className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleDecrement}
+                disabled={currentPaxCount <= 1}
+                className="flex h-6 w-6 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 transition-colors font-medium text-sm"
+                aria-label="Decrease travellers"
+              >
+                -
+              </button>
+              <span className="w-4 text-center font-semibold text-foreground text-sm">{currentPaxCount}</span>
+              <button
+                type="button"
+                onClick={handleIncrement}
+                disabled={currentPaxCount >= 9}
+                className="flex h-6 w-6 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 transition-colors font-medium text-sm"
+                aria-label="Increase travellers"
+              >
+                +
+              </button>
+            </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Seats</dt>
             <dd className="font-medium text-foreground">{seats.length > 0 ? seats.join(", ") : "Auto-assign"}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Fare × {paxCount}</dt>
+            <dt className="text-muted-foreground">Fare × {currentPaxCount}</dt>
             <dd className="font-medium text-foreground">{formatINR(perSeat)}</dd>
           </div>
         </dl>
