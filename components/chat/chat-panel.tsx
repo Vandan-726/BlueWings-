@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Send, Loader2, Sparkles, Wrench } from "lucide-react"
 
@@ -215,6 +216,7 @@ export function ChatPanel({
   variant: "web" | "whatsapp"
   suggestions?: string[]
 }) {
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [status, setStatus] = useState<"idle" | "submitted">("idle")
@@ -265,6 +267,16 @@ export function ChatPanel({
 
       if (data.messages) {
         setMessages(data.messages)
+      }
+
+      // Check for reschedule redirect URL in the reply
+      if (data.reply) {
+        const match = data.reply.match(/\/trips\/([A-Za-z0-9]{6})\?reschedule=true/)
+        if (match) {
+          setTimeout(() => {
+            router.push(match[0])
+          }, 1500)
+        }
       }
     } catch (err: any) {
       console.error("Chat error:", err)

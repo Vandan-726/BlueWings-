@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import useSWR from "swr"
 import { formatINR, formatTime, formatShortDate } from "@/lib/format"
@@ -37,6 +37,15 @@ export function ManageBooking({
   const [seatInputs, setSeatInputs] = useState<Record<number, string>>({})
   const [showReschedule, setShowReschedule] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get("reschedule") === "true") {
+        setShowReschedule(true)
+      }
+    }
+  }, [])
 
   const { data: altData } = useSWR<{ alternatives: any[] }>(
     showReschedule ? `/api/bookings/${pnr}/alternatives` : null,
