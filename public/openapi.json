@@ -1,0 +1,1257 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "BlueWings Airlines API Documentation",
+    "description": "API Specification for BlueWings Airlines backend services including search, bookings, passenger management, seat selection, profile, real-time chat, and webhooks.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Local/Production Next.js Server"
+    }
+  ],
+  "paths": {
+    "/api/auth/request-otp": {
+      "post": {
+        "summary": "Request OTP Code",
+        "description": "Issues a login/registration OTP code to the provided phone number. In demo mode, the OTP is returned in the response for visual verification. In production mode, it initiates a client-side Firebase flow.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "description": "Phone number with country code",
+                    "example": "+919876543210"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP successfully requested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "demo",
+                        "firebase"
+                      ],
+                      "example": "demo"
+                    },
+                    "phone": {
+                      "type": "string",
+                      "example": "+919876543210"
+                    },
+                    "demoOtp": {
+                      "type": "string",
+                      "description": "Returned only in demo mode",
+                      "example": "123456"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid phone number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Enter a valid phone number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify-otp": {
+      "post": {
+        "summary": "Verify OTP Code and Login",
+        "description": "Verifies the OTP code (or Firebase token) and logs the user in, establishing a session cookie.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "+919876543210"
+                  },
+                  "otp": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 6,
+                    "description": "Required in Demo OTP mode",
+                    "example": "123456"
+                  },
+                  "firebaseIdToken": {
+                    "type": "string",
+                    "description": "Required in Firebase production mode",
+                    "example": "eyJhbG..."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Optional name for user registration",
+                    "example": "John Doe"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Optional email for user registration",
+                    "example": "john@example.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified successfully, session cookie established",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "usr_abc123"
+                        },
+                        "phone": {
+                          "type": "string",
+                          "example": "+919876543210"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "John Doe"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "john@example.com"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "OTP is required"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Incorrect OTP code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Invalid or expired OTP"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Get Authenticated User Info",
+        "description": "Retrieves information about the currently logged-in user from the session cookie.",
+        "responses": {
+          "200": {
+            "description": "Current user profile info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "usr_abc123"
+                        },
+                        "phone": {
+                          "type": "string",
+                          "example": "+919876543210"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "John Doe"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "john@example.com"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Log out from session",
+        "description": "Destroys the current session cookie.",
+        "responses": {
+          "200": {
+            "description": "Successfully logged out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flights/search": {
+      "get": {
+        "summary": "Search flights",
+        "description": "Searches for flights based on origin, destination, and departure date.",
+        "parameters": [
+          {
+            "name": "origin",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            "description": "Origin airport IATA code (e.g. DEL, BOM)",
+            "example": "DEL"
+          },
+          {
+            "name": "destination",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            "description": "Destination airport IATA code (e.g. BOM, DEL)",
+            "example": "BOM"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "description": "Departure date in YYYY-MM-DD format",
+            "example": "2026-07-15"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of matching flights",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "flights": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "example": "fl_12345"
+                          },
+                          "flightNumber": {
+                            "type": "string",
+                            "example": "BW-102"
+                          },
+                          "origin": {
+                            "type": "string",
+                            "example": "DEL"
+                          },
+                          "destination": {
+                            "type": "string",
+                            "example": "BOM"
+                          },
+                          "departureTime": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-07-15T09:00:00.000Z"
+                          },
+                          "arrivalTime": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-07-15T11:15:00.000Z"
+                          },
+                          "economyPrice": {
+                            "type": "string",
+                            "example": "4500"
+                          },
+                          "premiumPrice": {
+                            "type": "string",
+                            "example": "6500"
+                          },
+                          "businessPrice": {
+                            "type": "string",
+                            "example": "12000"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "origin, destination, and date (YYYY-MM-DD) are required"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flights/{id}/seats": {
+      "get": {
+        "summary": "Get Flight Seat Map",
+        "description": "Gets full details of the flight along with list of currently occupied seat numbers.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Flight database identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flight details and occupied seats list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "flight": {
+                      "type": "object"
+                    },
+                    "occupied": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "12A",
+                        "14F",
+                        "1C"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Flight not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Flight not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings": {
+      "get": {
+        "summary": "List User Bookings",
+        "description": "Retrieves all bookings made by the currently logged-in user.",
+        "responses": {
+          "200": {
+            "description": "List of bookings with flights",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bookings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "booking": {
+                            "type": "object"
+                          },
+                          "flight": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Flight Booking",
+        "description": "Creates a new flight booking in PENDING payment status for the logged-in user.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "flightId",
+                  "cabin",
+                  "passengers"
+                ],
+                "properties": {
+                  "flightId": {
+                    "type": "string"
+                  },
+                  "cabin": {
+                    "type": "string",
+                    "enum": [
+                      "economy",
+                      "premium",
+                      "business"
+                    ]
+                  },
+                  "contactEmail": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "passenger@example.com"
+                  },
+                  "passengers": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 9,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "firstName",
+                        "lastName"
+                      ],
+                      "properties": {
+                        "firstName": {
+                          "type": "string",
+                          "maxLength": 60
+                        },
+                        "lastName": {
+                          "type": "string",
+                          "maxLength": 60
+                        },
+                        "gender": {
+                          "type": "string",
+                          "example": "male"
+                        },
+                        "age": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 120
+                        },
+                        "seatNumber": {
+                          "type": "string",
+                          "maxLength": 4,
+                          "example": "14D"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Booking successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "booking": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "409": {
+            "description": "Booking conflict (e.g. seats already taken)"
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}": {
+      "get": {
+        "summary": "Get Booking Details",
+        "description": "Retrieves the full details of a specific booking using its PNR code or ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The PNR code (e.g. VUGBL7) or booking ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking details including passenger and payment information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "booking": {
+                      "type": "object"
+                    },
+                    "flight": {
+                      "type": "object"
+                    },
+                    "passengers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "payment": {
+                      "type": "object",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Booking not found"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Modify Booking Actions",
+        "description": "Executes actions on a booking such as seat changes, ancillaries modifications, cancellation, or rescheduling.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The booking PNR code or ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "action"
+                    ],
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "cancel"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "action",
+                      "passengerId",
+                      "seatNumber"
+                    ],
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "change_seat"
+                        ]
+                      },
+                      "passengerId": {
+                        "type": "integer"
+                      },
+                      "seatNumber": {
+                        "type": "string",
+                        "example": "12B"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "action",
+                      "passengerId"
+                    ],
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "update_ancillaries"
+                        ]
+                      },
+                      "passengerId": {
+                        "type": "integer"
+                      },
+                      "meal": {
+                        "type": "string",
+                        "enum": [
+                          "standard",
+                          "vegetarian",
+                          "vegan",
+                          "jain",
+                          "gluten-free",
+                          "diabetic"
+                        ]
+                      },
+                      "extraBaggageKg": {
+                        "type": "integer",
+                        "enum": [
+                          0,
+                          5,
+                          10,
+                          15,
+                          20,
+                          30
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "action",
+                      "newFlightId"
+                    ],
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "reschedule"
+                        ]
+                      },
+                      "newFlightId": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Action executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation error"
+          },
+          "409": {
+            "description": "Conflict or operation rejected (e.g. rescheduling flight with mismatching airports)"
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}/alternatives": {
+      "get": {
+        "summary": "Get Alternative Flights for Rescheduling",
+        "description": "Retrieves a list of alternative flights that fly on the same route as the booking, allowing rescheduling.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The booking PNR code or ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of alternative flights",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "alternatives": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments": {
+      "post": {
+        "summary": "Process Payment Confirmation",
+        "description": "Confirms the payment for a pending booking. In this mock system, providing a payment outcome of 'success' transitions the booking status to 'confirmed'. Providing outcome 'failure' or using a card number ending in 0000 returns a failed confirmation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "bookingId",
+                  "method",
+                  "outcome"
+                ],
+                "properties": {
+                  "bookingId": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "card",
+                      "upi",
+                      "netbanking"
+                    ]
+                  },
+                  "cardLast4": {
+                    "type": "string",
+                    "minLength": 4,
+                    "maxLength": 4,
+                    "example": "1234"
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "success",
+                      "failure"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment status response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "status": {
+                      "type": "string",
+                      "example": "confirmed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Payment was rejected or booking state conflict"
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "summary": "Post message to Sky (AI Travel Assistant)",
+        "description": "Submits a user message and returns the response from Sky (OpenAI/OpenRouter engine) including any tool execution history.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "The user message",
+                    "example": "reschedule my flight"
+                  },
+                  "conversationId": {
+                    "type": "string",
+                    "description": "Optional conversation UUID to continue a thread",
+                    "example": "conv_987654"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversationId": {
+                      "type": "string",
+                      "example": "conv_987654"
+                    },
+                    "reply": {
+                      "type": "string",
+                      "example": "Redirecting you to the reschedule page: /trips/VUGBL7?reschedule=true"
+                    },
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "assistant"
+                            ]
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "parts": {
+                            "type": "array",
+                            "items": {
+                              "type": "object"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "patch": {
+        "summary": "Update Profile Details",
+        "description": "Updates name and email details for the logged-in user.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "summary": "Get User Notifications",
+        "description": "Retrieves the latest 30 notifications for the logged-in user.",
+        "responses": {
+          "200": {
+            "description": "List of notifications",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "notifications": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Mark Notifications as Read",
+        "description": "Marks all unread notifications as read for the logged-in user.",
+        "responses": {
+          "200": {
+            "description": "Successfully marked notifications as read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whatsapp/webhook": {
+      "get": {
+        "summary": "Verify Meta Webhook Challenge",
+        "description": "Verifies the webhook subscription token for WhatsApp integration.",
+        "parameters": [
+          {
+            "name": "hub.mode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hub.verify_token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hub.challenge",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns challenge token back",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Verification failed"
+          }
+        }
+      },
+      "post": {
+        "summary": "Handle Incoming WhatsApp Messages",
+        "description": "Receives payloads from Meta's cloud APIs, parses text messages, registers guest accounts, feeds them into the AI engine, and pushes replies back using Meta APIs.",
+        "responses": {
+          "200": {
+            "description": "Payload received and processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "received": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/escalations": {
+      "patch": {
+        "summary": "Update Escalation Status",
+        "description": "Updates the handoff status of an escalation ticket.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "status"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "number",
+                    "description": "Numeric ticket ID"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "resolved",
+                      "dismissed"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "escalation": {
+                      "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+    "/api/admin/purge": {
+      "post": {
+        "summary": "Purge All Database Records",
+        "description": "Admin action to clear all database user, booking, flight-selection, payment, and support conversation records.",
+        "responses": {
+          "200": {
+            "description": "Purge successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reset": {
+      "post": {
+        "summary": "Reset Transactional Data Only",
+        "description": "Admin action to clear transactions (bookings, seats, notifications, payments, escalations, messages) while keeping registered users and flights.",
+        "responses": {
+          "200": {
+            "description": "Reset successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
